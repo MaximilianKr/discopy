@@ -1,9 +1,10 @@
 numpy>=1.18.0
 nltk>=3.4
 joblib
-sklearn
+scikit-learn<1.0
 sklearn-crfsuite
-tensorflow>=2.1.0
-transformers==4.2.1
+supar==1.1.1
+tensorflow>=2.4.0
+transformers==4.8.1
 fastapi==0.67.0
-git+git://github.com:rknaebel/discopy-data
+git+https://github.com/rknaebel/discopy-data.git@dev
