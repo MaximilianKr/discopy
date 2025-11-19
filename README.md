@@ -27,7 +27,7 @@ The parser relies on Python 3.8, which you can set up locally for this repo usin
 ```bash
 curl -fsSL https://pyenv.run | bash
 pyenv install 3.8.18
-# set default Python interpreter for the local repo
+# set default Python interpreter for local repo
 pyenv local 3.8.18
 ```
 
@@ -51,6 +51,8 @@ uv pip install -e .
 </details>
 
 ## Usage
+
+Example use cases can be found inside [docs](docs/).
 
 *Discopy* currently supports different modes and distinguishes standard feature-based models and neural-based (transformer) models.
 These example commands are executed from within the repository folder.
@@ -126,26 +128,6 @@ cat path/to/textfile | discopy-nn-parse [BERT-MODEL] [MODEL-PATH]
 
 ```bash
 discopy-tokenize --tokenize-only -i path/to/textfile | discopy-nn-parse bert-base-cased models/pipeline-bert-2
-```
-
-##### Example Using Pretrained Model
-
-Download one of the available pretrained models from the [CODI Release](https://github.com/rknaebel/discopy/releases).
-Then unpack it to `models/`.
-
-For example, using the `bert-base-cased` model, from the repository root:
-
-```bash
-mkdir -p models
-curl -L \
-  "https://github.com/rknaebel/discopy/releases/download/1.1.0/bert-10.11.21-13.31.tar.gz" \
-  | tar -xz -C models
-```
-
-Run the parser on the [test file](data/in.jsonl):
-
-```bash
-discopy-nn-parse bert-base-cased models/ -i data/test_in.jsonl -o data/test_out.jsonl
 ```
 
 </details>
