@@ -51,6 +51,21 @@ Create one or more UTF-8 text files. Alternatively, use the sample `txt` files i
 
 Each document becomes one JSON line containing sentences, tokens, and metadata.
 
+### Optional: Refine Parses with Supar
+
+<details>
+  <summary>Click to expand/collapse</summary>
+
+You can enrich the JSONL with high-quality dependency/constituency parses before parsing:
+
+```bash
+discopy-add-parses -s data/doc1.jsonl -o data/doc1.supar.jsonl --dependencies --constituents
+```
+
+Feed `data/raw_docs.supar.jsonl` into `discopy-nn-parse` when you need supar parses instead of the default trankit ones.
+
+</details>
+
 ## Parse with Pretrained Model
 
 Run the neural parser (replace `bert-base-cased` and the model path with the release you downloaded).
@@ -58,13 +73,18 @@ Run the neural parser (replace `bert-base-cased` and the model path with the rel
 - Single JSONL:
 
   ```bash
-  discopy-nn-parse bert-base-cased models/bert-base-cased -i data/doc1.jsonl -o data/doc1.out.jsonl
+  discopy-nn-parse bert-base-cased models/bert-base-cased \
+    -i data/doc1.jsonl -o data/doc1.out.jsonl
+  # or if you added optional supar parses
+  discopy-nn-parse bert-base-cased models/bert-base-cased \
+    -i data/doc1.supar.jsonl -o data/doc1.supar.out.jsonl
   ```
 
 - Multiple files / batch:
 
   ```bash
-  discopy-nn-parse bert-base-cased models/bert-base-cased -i data/raw_docs.jsonl -o data/raw_docs.out.jsonl
+  discopy-nn-parse bert-base-cased models/bert-base-cased \
+    -i data/raw_docs.jsonl -o data/raw_docs.out.jsonl
   ```
 
 The output JSONL mirrors the input documents but adds predicted `relations` entries (Arg1/Arg2 spans, senses, types).
