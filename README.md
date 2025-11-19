@@ -36,7 +36,7 @@ pyenv local 3.8.18
 Recommended: use [uv package manager](https://docs.astral.sh/uv/)
 This will use the previously set up Python 3.8 interpreter.
 
-From root:
+From the repository root:
 
 ```bash
 uv venv --python 3.8
@@ -76,7 +76,7 @@ discopy-train lin path/to/model path/to/conll
 
 Training data format is json, the folder contains subfolders `en.{train,dev,test}` with files `relations.json` and `parses.json`.
 
-#### Standard (Standard)
+#### Prediction (Standard)
 
 ```bash
 discopy-predict lin path/to/conll/en.part path/to/model/lin
@@ -126,6 +126,26 @@ cat path/to/textfile | discopy-nn-parse [BERT-MODEL] [MODEL-PATH]
 
 ```bash
 discopy-tokenize --tokenize-only -i path/to/textfile | discopy-nn-parse bert-base-cased models/pipeline-bert-2
+```
+
+##### Example Using Pretrained Model
+
+Download one of the available pretrained models from the [CODI Release](https://github.com/rknaebel/discopy/releases).
+Then unpack it to `models/`.
+
+For example, using the `bert-base-cased` model, from the repository root:
+
+```bash
+mkdir -p models
+curl -L \
+  "https://github.com/rknaebel/discopy/releases/download/1.1.0/bert-10.11.21-13.31.tar.gz" \
+  | tar -xz -C models
+```
+
+Run the parser on the [test file](data/in.jsonl):
+
+```bash
+discopy-nn-parse bert-base-cased models/ -i data/test_in.jsonl -o data/test_out.jsonl
 ```
 
 </details>
