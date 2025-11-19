@@ -1,3 +1,4 @@
+import os
 import json
 
 import click
@@ -7,6 +8,10 @@ from discopy.parsers.pipeline import ParserPipeline
 from discopy.utils import init_logger
 from discopy_data.data.doc import Document
 from discopy_data.nn.bert import get_sentence_embedder
+
+
+# Suppress TensorFlow logging except for errors
+os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
 
 
 @click.command()
