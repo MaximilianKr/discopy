@@ -46,7 +46,10 @@ Create one or more UTF-8 text files. Alternatively, use the sample `txt` files i
 - Multiple files:
 
   ```bash
-  cat data/test_raw/*.txt | discopy-tokenize -o data/raw_docs.jsonl
+  for f in  data/test_raw/*.txt; do
+    echo "Tokenizing $f"
+    discopy-tokenize -i "$f" >> data/raw_docs.jsonl
+  done
   ```
 
 Each document becomes one JSON line containing sentences, tokens, and metadata.
