@@ -38,10 +38,46 @@ FIELDS = [
 ]
 
 
+def utf16_spans_to_char_spans(spans, text):
+    """
+    Convert spans in UTF-16 code units to Python char index spans.
+
+    spans: list of (start16, end16) where indices are in UTF-16 code units
+           and end16 is exclusive.
+    text:  the original Python str (same as doc.text).
+    """
+    if not spans:
+        return []
+
+    # build map from UTF-16 unit index -> char index
+    unit_to_char = []
+    for ci, ch in enumerate(text):
+        units = len(ch.encode("utf-16le")) // 2  # 1 for BMP, 2 for emoji/surrogates
+        unit_to_char.extend([ci] * units)
+
+    max_unit = len(unit_to_char)
+    out = []
+    for s16, e16 in spans:
+        if max_unit == 0:
+            continue
+        # clamp to valid range
+        s16 = max(0, min(s16, max_unit - 1))
+        e16 = max(0, min(e16, max_unit))
+
+        # PDTB-style spans are half-open [s16, e16)
+        start_char = unit_to_char[s16]
+        end_char   = unit_to_char[e16 - 1] + 1  # convert last code unit to end-char+1
+
+        out.append((start_char, end_char))
+
+    return out
+
+
 def get_spans(span_str: str):
     """ Parse PDTB-style span list string into list of (start, end) tuples. """
     if not span_str:
         return []
+
     return [tuple(map(int, span.split(".."))) for span in span_str.strip(";").split(";") if span]
 
 
@@ -53,6 +89,7 @@ def tokens_for(spans, tokens):
             if (s <= t.offset_begin < e) or (s < t.offset_end <= e) or (t.offset_begin <= s and t.offset_end >= e):
                 out.append(t)
                 break
+
     return out
 
 
@@ -64,15 +101,28 @@ def tokenize(raw: Path, out_path: Path):
 
 def build_relations(doc, ann_path: Path):
     tokens = doc.get_tokens()
+    text = doc.text
     relations = []
     lines = [ln for ln in ann_path.read_text().splitlines() if ln.strip()]
     for line in lines:
         rel = dict(zip(FIELDS, line.split("|")))
-        arg1 = tokens_for(get_spans(rel["Arg1SpanList"]), tokens)
-        arg2 = tokens_for(get_spans(rel["Arg2SpanList"]), tokens)
-        conn = tokens_for(get_spans(rel["ConnSpanList"]), tokens)
+
+        arg1_spans16 = get_spans(rel["Arg1SpanList"])
+        arg2_spans16 = get_spans(rel["Arg2SpanList"])
+        conn_spans16 = get_spans(rel["ConnSpanList"])
+
+        # convert UTF-16 unit spans -> Python char spans
+        arg1_spans = utf16_spans_to_char_spans(arg1_spans16, text)
+        arg2_spans = utf16_spans_to_char_spans(arg2_spans16, text)
+        conn_spans = utf16_spans_to_char_spans(conn_spans16, text)
+
+        arg1 = tokens_for(arg1_spans, tokens)
+        arg2 = tokens_for(arg2_spans, tokens)
+        conn = tokens_for(conn_spans, tokens)
+
         senses = [rel["SClass1A"]] + ([rel["SClass1B"]] if rel["SClass1B"] else [])
         relations.append(Relation(arg1, arg2, conn, senses, rel["Relation"]))
+
     return relations
 
 
@@ -82,6 +132,7 @@ def find_one(pattern: str):
         raise FileNotFoundError(f"No match for pattern: {pattern}")
     if len(matches) > 1:
         raise FileExistsError(f"Multiple matches for pattern: {pattern}")
+
     return Path(matches[0])
 
 
@@ -93,6 +144,7 @@ def parse_args():
     ap.add_argument("--gold-out", type=Path, required=True, help="Output gold JSONL path (combined).")
     ap.add_argument("--pred-in", type=Path, help="Optional parser-input JSONL path (combined).")
     ap.add_argument("--tmp-dir", type=Path, default=Path("data/twiconv/tmp"), help="Temp dir for tokenized files.")
+
     return ap.parse_args()
 
 
