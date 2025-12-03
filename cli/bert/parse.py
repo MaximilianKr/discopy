@@ -10,8 +10,12 @@ from discopy_data.data.doc import Document
 from discopy_data.nn.bert import get_sentence_embedder
 
 
-# Suppress TensorFlow logging except for errors
-os.environ["TF_CPP_MIN_LOG_LEVEL"]="2"
+# suppress framework logs for inference runs
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+# quiet HF loading
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+# enable incremental GPU allocation
+os.environ.setdefault("TF_FORCE_GPU_ALLOW_GROWTH", "true")
 
 
 @click.command()
