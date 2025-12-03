@@ -7,6 +7,7 @@ from discopy_data.data.doc import Document
 from discopy_data.data.relation import Relation
 from discopy_data.data.token import TokenSpan
 
+
 logger = logging.getLogger('discopy')
 
 
@@ -26,12 +27,13 @@ def print_results(results, title=''):
     logger.info('Sense:                        P {:<06.4} R {:<06.4} F1 {:<06.4}'.format(*results['sense']))
 
 
-def score_doc(gold_doc: Document, pred_doc: Document, threshold=0.9):
+def score_doc(gold_doc: Document, pred_doc: Document, threshold=0.9, legacy=False):
     """
     Args:
-        gold_doc (Document):
-        pred_doc (Document):
-        threshold:
+        gold_doc: Document
+        pred_doc: Document
+        threshold: float
+        legacy: bool
     """
     gold_list = gold_doc.relations
     pred_list = pred_doc.relations
@@ -47,12 +49,15 @@ def score_doc(gold_doc: Document, pred_doc: Document, threshold=0.9):
     }
 
 
-def evaluate_docs(gold_docs: List[Document], pred_docs: List[Document], threshold=0.9):
+def evaluate_docs(gold_docs: List[Document], pred_docs: List[Document], threshold=0.9, legacy=False):
     """
+    Evaluate discourse parsing over a list of documents.
+
     Args:
-        gold_docs:
-        pred_docs:
-        threshold:
+        gold_docs: List[Document]
+        pred_docs: List[Document]
+        threshold: float
+        legacy: bool
     """
     results = {
         'conn': [],
@@ -61,13 +66,15 @@ def evaluate_docs(gold_docs: List[Document], pred_docs: List[Document], threshol
         'arg12': [],
         'sense': [],
     }
+
     for gold_doc, pred_doc in zip(gold_docs, pred_docs):
-        result = score_doc(gold_doc, pred_doc, threshold)
+        result = score_doc(gold_doc, pred_doc, threshold, legacy)
         results['conn'].append(result['conn'])
         results['arg1'].append(result['arg1'])
         results['arg2'].append(result['arg2'])
         results['arg12'].append(result['arg12'])
         results['sense'].append(result['sense'])
+
     return {
         'conn': compute_prf(*np.sum(np.stack(results['conn']), axis=0)),
         'arg1': compute_prf(*np.sum(np.stack(results['arg1']), axis=0)),
@@ -158,15 +165,21 @@ def compute_span_f1(g_index_set: TokenSpan, p_index_set: TokenSpan) -> float:
     return 2 * (precision * recall) / (precision + recall)
 
 
-def evaluate_sense(gold_list: List[Relation], predicted_list: List[Relation], threshold=0.9):
+def evaluate_sense(gold_list: List[Relation], predicted_list: List[Relation], threshold=0.9, legacy=False):
     """
     Args:
-        gold_list:
-        predicted_list:
-        threshold:
+        gold_list: List[Relation]
+        predicted_list: List[Relation]
+        threshold: float
+        legacy: bool
     """
     tp = fp = fn = 0
-    gold_to_predicted_map = _link_gold_predicted(gold_list, predicted_list, threshold)
+    
+    if legacy:
+        gold_to_predicted_map = _link_gold_predicted(gold_list, predicted_list, threshold)
+    else:
+        gold_to_predicted_map = _link_gold_predicted_greedy(gold_list, predicted_list, threshold)
+
     for gi, gr in enumerate(gold_list):
         if gi in gold_to_predicted_map:
             # TODO check change
@@ -229,7 +242,7 @@ def compute_prf(tp, fp, fn):
     return precision, recall, f1
 
 
-def _link_gold_predicted(gold_list: List[Relation], predicted_list: List[Relation], threshold=0.9):
+def _link_gold_predicted_greedy(gold_list: List[Relation], predicted_list: List[Relation], threshold=0.9):
     """
     Links gold relations to predicted relations based on argument span overlap.
 
@@ -267,3 +280,21 @@ def _link_gold_predicted(gold_list: List[Relation], predicted_list: List[Relatio
         used_pred.add(pi)
 
     return gold_to_predicted
+
+
+def _link_gold_predicted(gold_list: List[Relation], predicted_list: List[Relation], threshold=0.9):
+    """Link gold relations to the predicted relations that fits best based on
+    the almost exact matching criterion
+
+    Args:
+        gold_list:
+        predicted_list:
+        threshold:
+    """
+    gold_to_predicted_map = {}
+
+    for gi, gr in enumerate(gold_list):
+        for pi, pr in enumerate(predicted_list):
+            if compute_span_f1(gr.arg1 | gr.arg2, pr.arg1 | pr.arg2) >= threshold:
+                gold_to_predicted_map[gi] = pi
+    return gold_to_predicted_map
