@@ -1,8 +1,8 @@
 """
 Evaluate predicted JSONL documents against gold JSONL documents.
 
-Both inputs should be discopy-style JSONL files (e.g., after discopy-extract and
-discopy-add-annotations). This is a lightweight wrapper around
+Both inputs should be discopy-style JSONL files (e.g., after discopy-extract
+and discopy-add-annotations). This is a lightweight wrapper around
 `discopy.evaluate.conll.evaluate_docs`.
 """
 
@@ -12,6 +12,7 @@ import sys
 from typing import Optional
 
 from discopy.evaluate.conll import evaluate_docs, print_results
+from discopy.evaluate.utils import normalize_senses, truncate_senses
 from discopy_data.data.loaders.json import load_documents
 
 
@@ -25,14 +26,34 @@ def parse_args() -> argparse.Namespace:
         default=0.9,
         help="IOU threshold for span matching (default: 0.9).",
     )
+    parser.add_argument(
+        "--sense-level",
+        type=int,
+        default=-1,
+        help="Truncate senses to this level for BOTH gold and pred (e.g., 2 or 3). -1 keeps full sense strings.",
+    )
+    parser.add_argument(
+        "--no-sense-normalize",
+        action="store_true",
+        help="Disable sense normalization for implicit relations (enabled by default).",
+    )
     return parser.parse_args()
 
 
 def main() -> Optional[int]:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     args = parse_args()
+
     gold = load_documents(open(args.gold))
     pred = load_documents(open(args.pred))
+
+    if not args.no_sense_normalize:
+        # only affects implicit relations
+        gold = normalize_senses(gold)
+        pred = normalize_senses(pred)
+
+    gold = truncate_senses(gold, args.sense_level)
+    pred = truncate_senses(pred, args.sense_level)
 
     logging.info(f"Loaded gold: {len(gold)} docs from {args.gold}")
     logging.info(f"Loaded pred: {len(pred)} docs from {args.pred}")
