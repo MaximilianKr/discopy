@@ -230,18 +230,40 @@ def compute_prf(tp, fp, fn):
 
 
 def _link_gold_predicted(gold_list: List[Relation], predicted_list: List[Relation], threshold=0.9):
-    """Link gold relations to the predicted relations that fits best based on
-    the almost exact matching criterion
+    """
+    Links gold relations to predicted relations based on argument span overlap.
+
+    Computes F1 score for union of arg1 and arg2 spans between each gold and
+    predicted relation. Then greedily matches gold relations to predicted
+    relations with the highest scores above the threshold, ensuring each
+    predicted relation is used at most once.
 
     Args:
-        gold_list:
-        predicted_list:
-        threshold:
+        gold_list (List[Relation]): List of gold standard relations.
+        predicted_list (List[Relation]): List of predicted relations.
+        threshold (float): Minimum F1 score required to consider a match.
+    
+    Returns:
+        Dict[int, int]: Map from gold relation to predicted relation indices.
     """
-    gold_to_predicted_map = {}
-
+    # compute all viable matches with their scores
+    candidates = []
+    # gold index, gold relation
     for gi, gr in enumerate(gold_list):
+        # predicted index, predicted relation
         for pi, pr in enumerate(predicted_list):
-            if compute_span_f1(gr.arg1 | gr.arg2, pr.arg1 | pr.arg2) >= threshold:
-                gold_to_predicted_map[gi] = pi
-    return gold_to_predicted_map
+            score = compute_span_f1(gr.arg1 | gr.arg2, pr.arg1 | pr.arg2)
+            if score >= threshold:
+                candidates.append((score, gi, pi))
+
+    # greedy: highest score first, consume preds once
+    candidates.sort(reverse=True, key=lambda x: x[0])
+    gold_to_predicted = {}
+    used_pred = set()
+    for score, gi, pi in candidates:
+        if gi in gold_to_predicted or pi in used_pred:
+            continue
+        gold_to_predicted[gi] = pi
+        used_pred.add(pi)
+
+    return gold_to_predicted
