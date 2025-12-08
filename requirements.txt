@@ -2,6 +2,9 @@ fastapi==0.67.0
 joblib==1.1.0
 numpy>=1.18.0
 nltk>=3.4
+nvidia-cuda-runtime-cu11  # comment out for cpu-only
+nvidia-cublas-cu11  # comment out for cpu-only
+nvidia-cudnn-cu11  # comment out for cpu-only
 pandas==1.3.5
 pybtex==0.24.0
 scikit-learn<1.0
